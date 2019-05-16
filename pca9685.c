@@ -116,7 +116,7 @@ static rt_err_t read_regs(pca9685_device_t dev, rt_uint8_t reg, rt_uint8_t len, 
  * @brief set the frequency of pwm needed to output
  * 
  * @param dev the pointer of device structure
- * @param freq pwm frequency
+ * @param freq pwm frequency(24 < freq < 1526)
  */
 void pca9685_set_pwm_freq(pca9685_device_t dev, float freq)
 {
@@ -144,7 +144,7 @@ void pca9685_set_pwm_freq(pca9685_device_t dev, float freq)
     rt_uint8_t prescale = (rt_uint8_t)(prescaleval + 0.5);
     LOG_I("%d",prescale);
     // https://cdn-shop.adafruit.com/datasheets/PCA9685.pdf page 25
-    // prescale value = round(osc_clock/(4096 * frequency) )– 1
+    // prescale value = round(osc_clock/(4096 * frequency) ) - 1
     // internal osc_clock is 25MHz
 
     rt_uint8_t oldmode = 0;
@@ -189,8 +189,8 @@ void pca9685_set_pwm_freq(pca9685_device_t dev, float freq)
  * 
  * @param dev the pointer of device structure
  * @param num the number of the pin needed to control
- * @param on pwm high level start time
- * @param off pwm high level stop time
+ * @param on pwm high level start time(0-4095)
+ * @param off pwm high level stop time(0-4095)
  */
 void pca9685_set_pwm(pca9685_device_t dev, rt_uint8_t num, rt_uint16_t on, rt_uint16_t off)
 {

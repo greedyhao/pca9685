@@ -47,7 +47,7 @@ typedef struct pca9685_device *pca9685_device_t;
  * @brief set the frequency of pwm needed to output
  * 
  * @param dev the pointer of device structure
- * @param freq pwm frequency
+ * @param freq pwm frequency(24 < freq < 1526)
  */
 void pca9685_set_pwm_freq(pca9685_device_t dev, float freq);
 
@@ -56,8 +56,8 @@ void pca9685_set_pwm_freq(pca9685_device_t dev, float freq);
  * 
  * @param dev the pointer of device structure
  * @param num the number of the pin needed to control
- * @param on pwm high level start time
- * @param off pwm high level stop time
+ * @param on pwm high level start time(0-4095)
+ * @param off pwm high level stop time(0-4095)
  */
 void pca9685_set_pwm(pca9685_device_t dev, rt_uint8_t num, rt_uint16_t on, rt_uint16_t off);
 
