@@ -18,7 +18,7 @@
 #define DBG_COLOR
 #include <rtdbg.h>
 
-#define I2C_BUS    "i2c3"
+#define I2C_BUS    "i2c1"
 
 static rt_thread_t tid1 = RT_NULL;
 
