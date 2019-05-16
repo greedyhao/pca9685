@@ -22,7 +22,7 @@
 
 static rt_thread_t tid1 = RT_NULL;
 
-int pca9685_sample_entry(void)
+static void pca9685_sample_entry(void *parameter)
 {
     rt_uint32_t count = 500;
     pca9685_device_t dev = RT_NULL;
@@ -30,7 +30,7 @@ int pca9685_sample_entry(void)
     dev = pca9685_init(I2C_BUS, RT_NULL);
 
     if (dev == RT_NULL)
-        return -1;
+        goto _exit;
 
     pca9685_set_pwm(dev, 0, 0, 306);
     pca9685_set_pwm(dev, 1, 0, 500);
@@ -41,10 +41,10 @@ int pca9685_sample_entry(void)
         count--;
         rt_thread_mdelay(10);
     }
-    
+
+_exit:    
     pca9685_deinit(dev);
 
-    return 0;
 }
 
 int pca9685_sample(void)

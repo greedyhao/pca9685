@@ -34,13 +34,13 @@ pca9685 遵循 Apache-2.0 许可，详见 `LICENSE` 文件。
 ```
 RT-Thread online packages
     peripheral libraries and drivers  --->
-        pca9685: Remote 8-bit I/O expander for I2C-bus  --->
+        pca9685: I2C-bus controlled 16-channel PWM controller  --->
 ```
 
 进入 pca9685 软件包的配置菜单按自己的需求进行具体的配置
 
 ```
-    --- pca9685: Remote 8-bit I/O expander for I2C-bus                           
+    --- pca9685: I2C-bus controlled 16-channel PWM controller                           
         [*]   Enable pca9685 sample
            Version (latest)  --->
 ```

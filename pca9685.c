@@ -60,9 +60,7 @@ static rt_err_t write_reg(pca9685_device_t dev, rt_uint8_t reg, unsigned short l
     }
     else
     {
-#ifdef RT_USING_SPI
-        res = rt_spi_send_then_send((struct rt_spi_device *)dev->bus, &reg, 1, &data, 1);
-#endif
+        res = -RT_ERROR;
     }
     return res;
 }
@@ -83,9 +81,7 @@ static rt_err_t read_regs(pca9685_device_t dev, rt_uint8_t reg, rt_uint8_t len, 
 #ifdef RT_USING_I2C
     struct rt_i2c_msg msgs[2];
 #endif
-#ifdef RT_USING_SPI
-    rt_uint8_t tmp;
-#endif
+
     if (dev->bus->type == RT_Device_Class_I2CBUS)
     {
 #ifdef RT_USING_I2C
@@ -111,85 +107,91 @@ static rt_err_t read_regs(pca9685_device_t dev, rt_uint8_t reg, rt_uint8_t len, 
     }
     else
     {
-#ifdef RT_USING_SPI
-        //The first bit of the first byte contains the Read/Write bit and indicates the Read (1) or Write (0) operation.
-        tmp = reg | 0x80;
-
-        res = rt_spi_send_then_recv((struct rt_spi_device *)dev->bus, &tmp, 1, buf, len);
-#endif
+        res = -RT_ERROR;
     }
     return res;
 }
 
 /**
- * @brief 
+ * @brief set the frequency of pwm needed to output
  * 
- * @param dev 
- * @param freq 
+ * @param dev the pointer of device structure
+ * @param freq pwm frequency
  */
-rt_err_t pca9685_set_pwm_freq(pca9685_device_t dev, float freq)
+void pca9685_set_pwm_freq(pca9685_device_t dev, float freq)
 {
-    rt_err_t ret = RT_EOK;
-    rt_uint8_t reg[2] = {PCA9685_MODE1};
+    rt_uint8_t reg = 0;
 
-    freq *= 0.982; // Correct for overshoot in the frequency setting (see issue #11).
+    if (freq > 1526)
+    {
+        LOG_E("invalid pwm frequency input(24 < freq < 1526)");
+        LOG_E("change to max of the freqency(1526)");
+        freq = 1526;
+    }
+    if (freq < 24)
+    {
+        LOG_E("invalid pwm frequency input(24 < freq < 1526)");
+        LOG_E("change to min of the freqency(24)");
+        freq = 24;
+    }
+
+    freq *= (float)0.982; // Correct for overshoot in the frequency setting
     float prescaleval = 25000000;
     prescaleval /= 4096;
     prescaleval /= freq;
     prescaleval -= 1;
+
     rt_uint8_t prescale = (rt_uint8_t)(prescaleval + 0.5);
     LOG_I("%d",prescale);
-
-    // rt_uint8_t prescale = 3;
+    // https://cdn-shop.adafruit.com/datasheets/PCA9685.pdf page 25
+    // prescale value = round(osc_clock/(4096 * frequency) )– 1
+    // internal osc_clock is 25MHz
 
     rt_uint8_t oldmode = 0;
     read_regs(dev, PCA9685_MODE1, 1, &oldmode);
     rt_uint8_t newmode = ((oldmode & 0x7F) | 0x10);
 
     LOG_D("sleep..");
-    ret = write_reg(dev, PCA9685_MODE1, 1, &newmode);            // go to sleep
-    if (ret != RT_EOK)
-    {
-        LOG_E("set sleep fail!");
-    }
-    read_regs(dev,PCA9685_MODE1, 1, &reg[1]);
-    LOG_I("after sleep reg:%p", reg[1]);
+    write_reg(dev, PCA9685_MODE1, 1, &newmode);            // go to sleep
+    read_regs(dev,PCA9685_MODE1, 1, &reg);
+    LOG_I("after sleep reg:%p", reg);
 
     LOG_D("prescaler..");
-    ret = write_reg(dev, PCA9685_PRESCALE, 1, &prescale);        // set the prescaler
-    if (ret != RT_EOK)
-    {
-        LOG_E("set prescaler fail!");
-    }
-    read_regs(dev,PCA9685_MODE1, 1, &reg[1]);
-    LOG_I("after prescaler reg:%p", reg[1]);
+    write_reg(dev, PCA9685_PRESCALE, 1, &prescale);        // set the prescaler
+    read_regs(dev,PCA9685_MODE1, 1, &reg);
+    LOG_I("after prescaler reg:%p", reg);
 
     LOG_D("old mode..");
-    ret = write_reg(dev, PCA9685_MODE1, 1, &oldmode);
-    if (ret != RT_EOK)
-    {
-        LOG_E("set oldmode fail!");
-    }
-    read_regs(dev,PCA9685_MODE1, 1, &reg[1]);
-    LOG_I("after oldmode reg:%p", reg[1]);
+    write_reg(dev, PCA9685_MODE1, 1, &oldmode);
+    read_regs(dev,PCA9685_MODE1, 1, &reg);
+    LOG_I("after oldmode reg:%p", reg);
 
     rt_thread_mdelay(5);
-    oldmode |= 0xA0;
-    reg[1] = oldmode;
-    LOG_D("auto run..");
-    ret = write_reg(dev, PCA9685_MODE1, 1, &oldmode); //  This sets the MODE1 register to turn on auto increment.
 
-    read_regs(dev,PCA9685_MODE1, 1, &reg[1]);
-    LOG_I("after auto reg:%p", reg[1]);
-
-    if (ret != RT_EOK)
+    if (PWM_All_Call)
     {
-        LOG_E("set pwm freq fail!");
+        oldmode |= 0xA1;
     }
-    
-    return ret;
+    else
+    {
+        oldmode |= 0xA0;
+    }
+
+    LOG_D("auto run..");
+    write_reg(dev, PCA9685_MODE1, 1, &oldmode); //  This sets the MODE1 register to turn on auto increment.
+
+    read_regs(dev,PCA9685_MODE1, 1, &reg);
+    LOG_I("after auto reg:%p", reg);
 }
 
+/**
+ * @brief set the pwm pulse of one pin
+ * 
+ * @param dev the pointer of device structure
+ * @param num the number of the pin needed to control
+ * @param on pwm high level start time
+ * @param off pwm high level stop time
+ */
 void pca9685_set_pwm(pca9685_device_t dev, rt_uint8_t num, rt_uint16_t on, rt_uint16_t off)
 {
     rt_uint8_t outputBuffer[4] = {on, (on >> 8), off, (off >> 8)};
@@ -197,6 +199,11 @@ void pca9685_set_pwm(pca9685_device_t dev, rt_uint8_t num, rt_uint16_t on, rt_ui
     write_reg(dev, LED0_ON_L + 4*num, 4, outputBuffer);
 }
 
+/**
+ * @brief make pca9685 restart
+ * 
+ * @param dev the pointer of device structure
+ */
 void pca9685_restart(pca9685_device_t dev)
 {
     rt_uint8_t reg;
@@ -206,7 +213,7 @@ void pca9685_restart(pca9685_device_t dev)
         LOG_I("restart..");
         reg = reg & 0xBF;
         write_reg(dev, PCA9685_MODE1, 1, &reg);
-        rt_thread_mdelay(2);
+        rt_thread_mdelay(1);
         reg = reg | 0x80; //reset
         write_reg(dev, PCA9685_MODE1, 1, &reg);
     }
@@ -215,7 +222,7 @@ void pca9685_restart(pca9685_device_t dev)
 
 pca9685_device_t pca9685_init(const char *dev_name, rt_uint8_t i2c_addr)
 {
-    rt_uint8_t buffer[] = { PCA9685_MODE1, 0x80 };
+    rt_uint8_t reg;
     pca9685_device_t dev = RT_NULL;
 
     RT_ASSERT(dev_name);
@@ -249,19 +256,18 @@ pca9685_device_t pca9685_init(const char *dev_name, rt_uint8_t i2c_addr)
 
     LOG_D("reset..");
     /* reset before use it */
-    if (write_reg(dev, PCA9685_MODE1, 1, &buffer[1]) != RT_EOK)
+    if (write_reg(dev, PCA9685_MODE1, 1, &reg) != RT_EOK)
     {
         LOG_E("i2c_bus %s for PCA9685 opened failed!", dev_name);
         goto __exit;
     }
-    read_regs(dev, PCA9685_MODE1, 1, &buffer[1]);
-    LOG_I("rest mode:%p", buffer[1]);
+    read_regs(dev, PCA9685_MODE1, 1, &reg);
+    LOG_I("rest mode:%p", reg);
 
     rt_thread_mdelay(10);
 
     pca9685_set_pwm_freq(dev, 50);
     
-
     LOG_D("pca9685 init done", dev_name);
     return dev;
 
