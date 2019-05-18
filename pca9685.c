@@ -141,8 +141,8 @@ void pca9685_set_pwm_freq(pca9685_device_t dev, float freq)
     prescaleval /= freq;
     prescaleval -= 1;
 
-    rt_uint8_t prescale = (rt_uint8_t)(prescaleval + 0.5);
-    LOG_I("%d",prescale);
+    rt_uint8_t prescale = (rt_uint8_t)(prescaleval + (float)0.5);
+    LOG_D("prescale:%d",prescale);
     // https://cdn-shop.adafruit.com/datasheets/PCA9685.pdf page 25
     // prescale value = round(osc_clock/(4096 * frequency) ) - 1
     // internal osc_clock is 25MHz
@@ -151,20 +151,17 @@ void pca9685_set_pwm_freq(pca9685_device_t dev, float freq)
     read_regs(dev, PCA9685_MODE1, 1, &oldmode);
     rt_uint8_t newmode = ((oldmode & 0x7F) | 0x10);
 
-    LOG_D("sleep..");
     write_reg(dev, PCA9685_MODE1, 1, &newmode);            // go to sleep
     read_regs(dev,PCA9685_MODE1, 1, &reg);
-    LOG_I("after sleep reg:%p", reg);
+    LOG_D("after sleep reg:%p", reg);
 
-    LOG_D("prescaler..");
     write_reg(dev, PCA9685_PRESCALE, 1, &prescale);        // set the prescaler
     read_regs(dev,PCA9685_MODE1, 1, &reg);
-    LOG_I("after prescaler reg:%p", reg);
+    LOG_D("after prescaler reg:%p", reg);
 
-    LOG_D("old mode..");
     write_reg(dev, PCA9685_MODE1, 1, &oldmode);
     read_regs(dev,PCA9685_MODE1, 1, &reg);
-    LOG_I("after oldmode reg:%p", reg);
+    LOG_D("after oldmode reg:%p", reg);
 
     rt_thread_mdelay(5);
 
@@ -181,7 +178,7 @@ void pca9685_set_pwm_freq(pca9685_device_t dev, float freq)
     write_reg(dev, PCA9685_MODE1, 1, &oldmode); //  This sets the MODE1 register to turn on auto increment.
 
     read_regs(dev,PCA9685_MODE1, 1, &reg);
-    LOG_I("after auto reg:%p", reg);
+    LOG_D("after auto reg:%p", reg);
 }
 
 /**
@@ -254,7 +251,6 @@ pca9685_device_t pca9685_init(const char *dev_name, rt_uint8_t i2c_addr)
         goto __exit;
     }
 
-    LOG_D("reset..");
     /* reset before use it */
     if (write_reg(dev, PCA9685_MODE1, 1, &reg) != RT_EOK)
     {
@@ -262,7 +258,7 @@ pca9685_device_t pca9685_init(const char *dev_name, rt_uint8_t i2c_addr)
         goto __exit;
     }
     read_regs(dev, PCA9685_MODE1, 1, &reg);
-    LOG_I("rest mode:%p", reg);
+    LOG_D("rest mode:%p", reg);
 
     rt_thread_mdelay(10);
 
