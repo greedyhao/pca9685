@@ -12,12 +12,12 @@
 pca9685
 |   img                             // 文档相关图片
 |   doc                             // 相关文档
-│   README.md                       // 软件包说明
-│   pca9685.c                       // 源文件
-│   pca9685.h                       // 头文件
-│   pca9685_sample.c                // 软件包使用示例代码
-│   SConscript                      // RT-Thread 默认的构建脚本
-│   LICENSE                         // 许可证文件
+|   README.md                       // 软件包说明
+|   pca9685.c                       // 源文件
+|   pca9685.h                       // 头文件
+|   pca9685_sample.c                // 软件包使用示例代码
+|   SConscript                      // RT-Thread 默认的构建脚本
+|   LICENSE                         // 许可证文件
 ```
 
 ### 许可证
